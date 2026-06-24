@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import client, { initDB } from "@/lib/db";
+import getClient, { initDB } from "@/lib/db";
 import { v4 as uuidv4 } from "uuid";
 
 export const dynamic = "force-dynamic";
@@ -11,6 +11,7 @@ function getSessionId(req: NextRequest): string | null {
 }
 
 export async function GET(req: NextRequest) {
+  const client = getClient();
   try {
     await initDB();
 
@@ -53,6 +54,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const client = getClient();
   try {
     await initDB();
 
@@ -89,6 +91,7 @@ export async function POST(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
+  const client = getClient();
   try {
     const sessionId = getSessionId(req);
     if (!sessionId) {

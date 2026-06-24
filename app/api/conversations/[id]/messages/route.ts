@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import client, { initDB } from "@/lib/db";
+import getClient, { initDB } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -7,6 +7,7 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const client = getClient();
   try {
     await initDB();
     const { id } = await params;

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import client, { initDB } from "@/lib/db";
+import getClient, { initDB } from "@/lib/db";
 import { INFOSEC_SYSTEM_PROMPT, OPENROUTER_CONFIG } from "@/lib/prompt";
 import { v4 as uuidv4 } from "uuid";
 
@@ -9,6 +9,7 @@ export const runtime = "nodejs";
 const COOKIE_NAME = "secbot_session";
 
 export async function POST(req: NextRequest) {
+  const client = getClient();
   try {
     await initDB();
 

@@ -1,19 +1,32 @@
-import { createClient } from "@libsql/client";
+import { createClient, Client } from "@libsql/client";
 
-const client = createClient({
-  url: process.env.TURSO_DATABASE_URL!,
-  authToken: process.env.TURSO_AUTH_TOKEN,
-});
+let _client: Client | null = null;
+
+function getClient(): Client {
+  if (_client) return _client;
+
+  const url = process.env.TURSO_DATABASE_URL;
+  const authToken = process.env.TURSO_AUTH_TOKEN;
+
+  if (!url) throw new Error("TURSO_DATABASE_URL não definida");
+
+  _client = createClient({ url, authToken });
+  return _client;
+}
 
 export async function initDB() {
+  const client = getClient();
+
   await client.execute(`
     CREATE TABLE IF NOT EXISTS conversations (
       id TEXT PRIMARY KEY,
+      session_id TEXT NOT NULL DEFAULT 'legacy',
       title TEXT NOT NULL,
       created_at INTEGER NOT NULL DEFAULT (unixepoch()),
       updated_at INTEGER NOT NULL DEFAULT (unixepoch())
     )
   `);
+
   try {
     await client.execute(
       `ALTER TABLE conversations ADD COLUMN session_id TEXT NOT NULL DEFAULT 'legacy'`,
@@ -39,4 +52,4 @@ export async function initDB() {
   `);
 }
 
-export default client;
+export default getClient;
