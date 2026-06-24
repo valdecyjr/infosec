@@ -1,0 +1,89 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap');
+@import "tailwindcss";
+
+:root {
+  --bg-primary: #030a03;
+  --bg-secondary: #070f07;
+  --bg-panel: #0a150a;
+  --bg-hover: #0f200f;
+  --green-bright: #00ff41;
+  --green-dim: #00b32c;
+  --green-dark: #005c14;
+  --green-glow: rgba(0, 255, 65, 0.15);
+  --green-glow-strong: rgba(0, 255, 65, 0.3);
+  --red-alert: #ff2244;
+  --amber: #ffb700;
+  --cyan: #00e5ff;
+  --text-primary: #c8ffc8;
+  --text-dim: #5a9a5a;
+  --text-muted: #2a4a2a;
+  --border: #0d3d0d;
+  --border-bright: #1a6b1a;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  overflow: hidden;
+}
+
+body::after {
+  content: '';
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
+  pointer-events: none;
+  z-index: 9999;
+}
+
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: var(--bg-primary); }
+::-webkit-scrollbar-thumb { background: var(--green-dark); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: var(--green-dim); }
+
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+@keyframes fadeInUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes pulse-green { 0%, 100% { box-shadow: 0 0 4px var(--green-glow); } 50% { box-shadow: 0 0 12px var(--green-glow-strong); } }
+
+.message-content h1, .message-content h2, .message-content h3 {
+  color: var(--green-bright);
+  margin: 0.75rem 0 0.4rem;
+  font-weight: 600;
+}
+.message-content h2::before { content: '## '; color: var(--green-dim); }
+.message-content h3::before { content: '### '; color: var(--green-dim); }
+.message-content p { margin: 0.4rem 0; line-height: 1.65; }
+.message-content ul, .message-content ol { margin: 0.4rem 0 0.4rem 1.2rem; }
+.message-content li { margin: 0.2rem 0; line-height: 1.5; }
+.message-content ul li::marker { color: var(--green-dim); content: '▸ '; }
+.message-content code {
+  background: #0a200a;
+  border: 1px solid var(--green-dark);
+  color: var(--cyan);
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 0.85em;
+  font-family: 'JetBrains Mono', monospace;
+}
+.message-content pre {
+  background: #050f05;
+  border: 1px solid var(--border-bright);
+  border-left: 3px solid var(--green-dim);
+  padding: 0.75rem 1rem;
+  border-radius: 4px;
+  overflow-x: auto;
+  margin: 0.6rem 0;
+}
+.message-content pre code { background: none; border: none; padding: 0; color: var(--text-primary); font-size: 0.82em; line-height: 1.5; }
+.message-content strong { color: var(--green-bright); font-weight: 600; }
+.message-content em { color: var(--amber); font-style: italic; }
+.message-content blockquote { border-left: 3px solid var(--green-dim); padding-left: 0.75rem; margin: 0.5rem 0; color: var(--text-dim); }
+.message-content a { color: var(--cyan); text-decoration: underline; }
+.message-content hr { border: none; border-top: 1px solid var(--border); margin: 0.75rem 0; }
+.cursor-blink::after { content: '█'; animation: blink 1s step-end infinite; color: var(--green-bright); margin-left: 2px; }
+.glow-text { text-shadow: 0 0 8px rgba(0,255,65,0.4); }
