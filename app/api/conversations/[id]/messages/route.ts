@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import client, { initDB } from "@/lib/db";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     await initDB();
@@ -22,6 +24,9 @@ export async function GET(
     return NextResponse.json(result.rows);
   } catch (error) {
     console.error("GET /api/conversations/[id]/messages error:", error);
-    return NextResponse.json({ error: "Erro ao buscar mensagens" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Erro ao buscar mensagens" },
+      { status: 500 },
+    );
   }
 }

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import client, { initDB } from "@/lib/db";
 import { v4 as uuidv4 } from "uuid";
 
+export const dynamic = "force-dynamic";
+
 const COOKIE_NAME = "secbot_session";
 
 function getSessionId(req: NextRequest): string | null {

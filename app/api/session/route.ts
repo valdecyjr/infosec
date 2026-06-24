@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
 
+export const dynamic = "force-dynamic";
+
 const COOKIE_NAME = "secbot_session";
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
 
