@@ -3,19 +3,47 @@ import client, { initDB } from "@/lib/db";
 import { INFOSEC_SYSTEM_PROMPT, OPENROUTER_CONFIG } from "@/lib/prompt";
 import { v4 as uuidv4 } from "uuid";
 
+const COOKIE_NAME = "secbot_session";
+
 export async function POST(req: NextRequest) {
   try {
     await initDB();
 
+    const sessionId = req.cookies.get(COOKIE_NAME)?.value;
+    if (!sessionId) {
+      return NextResponse.json(
+        { error: "Sessão não encontrada" },
+        { status: 401 },
+      );
+    }
+
     const { conversationId, message } = await req.json();
 
     if (!conversationId || !message?.trim()) {
-      return NextResponse.json({ error: "conversationId e message são obrigatórios" }, { status: 400 });
+      return NextResponse.json(
+        { error: "conversationId e message são obrigatórios" },
+        { status: 400 },
+      );
+    }
+
+    // Verificar que a conversa pertence a esta sessão
+    const convCheck = await client.execute({
+      sql: `SELECT id FROM conversations WHERE id = ? AND session_id = ?`,
+      args: [conversationId, sessionId],
+    });
+    if (convCheck.rows.length === 0) {
+      return NextResponse.json(
+        { error: "Conversa não encontrada" },
+        { status: 403 },
+      );
     }
 
     const apiKey = process.env.OPENROUTER_API_KEY;
     if (!apiKey) {
-      return NextResponse.json({ error: "OPENROUTER_API_KEY não configurada" }, { status: 500 });
+      return NextResponse.json(
+        { error: "OPENROUTER_API_KEY não configurada" },
+        { status: 500 },
+      );
     }
 
     // Buscar histórico da conversa (últimas 20 mensagens para contexto)
@@ -46,7 +74,8 @@ export async function POST(req: NextRequest) {
     // Atualizar título da conversa se for a primeira mensagem
     const msgCount = history.length;
     if (msgCount === 0) {
-      const title = message.trim().slice(0, 60) + (message.trim().length > 60 ? "..." : "");
+      const title =
+        message.trim().slice(0, 60) + (message.trim().length > 60 ? "..." : "");
       await client.execute({
         sql: `UPDATE conversations SET title = ?, updated_at = ? WHERE id = ?`,
         args: [title, now, conversationId],
@@ -59,38 +88,38 @@ export async function POST(req: NextRequest) {
     }
 
     // Montar mensagens para a API
-    const messages = [
-      ...history,
-      { role: "user", content: message.trim() },
-    ];
+    const messages = [...history, { role: "user", content: message.trim() }];
 
     // Chamada para OpenRouter com streaming
-    const openrouterResponse = await fetch(`${OPENROUTER_CONFIG.baseURL}/chat/completions`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`,
-        "HTTP-Referer": "https://infosec-ai.local",
-        "X-Title": "SecBot-X InfoSec Assistant",
+    const openrouterResponse = await fetch(
+      `${OPENROUTER_CONFIG.baseURL}/chat/completions`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+          "HTTP-Referer": "https://infosec-ai.local",
+          "X-Title": "SecBot-X InfoSec Assistant",
+        },
+        body: JSON.stringify({
+          model: OPENROUTER_CONFIG.model,
+          messages: [
+            { role: "system", content: INFOSEC_SYSTEM_PROMPT },
+            ...messages,
+          ],
+          max_tokens: OPENROUTER_CONFIG.maxTokens,
+          temperature: OPENROUTER_CONFIG.temperature,
+          stream: true,
+        }),
       },
-      body: JSON.stringify({
-        model: OPENROUTER_CONFIG.model,
-        messages: [
-          { role: "system", content: INFOSEC_SYSTEM_PROMPT },
-          ...messages,
-        ],
-        max_tokens: OPENROUTER_CONFIG.maxTokens,
-        temperature: OPENROUTER_CONFIG.temperature,
-        stream: true,
-      }),
-    });
+    );
 
     if (!openrouterResponse.ok) {
       const errorText = await openrouterResponse.text();
       console.error("OpenRouter error:", errorText);
       return NextResponse.json(
         { error: `Erro na API OpenRouter: ${openrouterResponse.status}` },
-        { status: openrouterResponse.status }
+        { status: openrouterResponse.status },
       );
     }
 
@@ -120,11 +149,18 @@ export async function POST(req: NextRequest) {
                   const savedAt = Math.floor(Date.now() / 1000);
                   await client.execute({
                     sql: `INSERT INTO messages (id, conversation_id, role, content, created_at) VALUES (?, ?, 'assistant', ?, ?)`,
-                    args: [assistantMsgId, conversationId, fullContent, savedAt],
+                    args: [
+                      assistantMsgId,
+                      conversationId,
+                      fullContent,
+                      savedAt,
+                    ],
                   });
 
                   controller.enqueue(
-                    new TextEncoder().encode(`data: ${JSON.stringify({ done: true, messageId: assistantMsgId })}\n\n`)
+                    new TextEncoder().encode(
+                      `data: ${JSON.stringify({ done: true, messageId: assistantMsgId })}\n\n`,
+                    ),
                   );
                   controller.close();
                   return;
@@ -136,7 +172,9 @@ export async function POST(req: NextRequest) {
                   if (delta) {
                     fullContent += delta;
                     controller.enqueue(
-                      new TextEncoder().encode(`data: ${JSON.stringify({ delta })}\n\n`)
+                      new TextEncoder().encode(
+                        `data: ${JSON.stringify({ delta })}\n\n`,
+                      ),
                     );
                   }
                 } catch {
@@ -156,11 +194,14 @@ export async function POST(req: NextRequest) {
       headers: {
         "Content-Type": "text/event-stream",
         "Cache-Control": "no-cache",
-        "Connection": "keep-alive",
+        Connection: "keep-alive",
       },
     });
   } catch (error) {
     console.error("POST /api/chat error:", error);
-    return NextResponse.json({ error: "Erro interno do servidor" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Erro interno do servidor" },
+      { status: 500 },
+    );
   }
 }

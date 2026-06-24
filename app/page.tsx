@@ -7,6 +7,7 @@ import ChatArea from "./components/ChatArea";
 import ChatInput from "./components/ChatInput";
 
 export default function Home() {
+  const [sessionReady, setSessionReady] = useState(false);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -14,7 +15,20 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [sidebarLoading, setSidebarLoading] = useState(false);
 
-  // Load conversations
+  // Inicializar sessão anônima via cookie httpOnly
+  useEffect(() => {
+    const initSession = async () => {
+      try {
+        await fetch("/api/session"); // Cria o cookie se não existir
+        setSessionReady(true);
+      } catch (err) {
+        console.error("Erro ao iniciar sessão:", err);
+        setSessionReady(true); // Tenta continuar mesmo assim
+      }
+    };
+    initSession();
+  }, []);
+
   const loadConversations = useCallback(async () => {
     setSidebarLoading(true);
     try {
@@ -31,10 +45,11 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    loadConversations();
-  }, [loadConversations]);
+    if (sessionReady) {
+      loadConversations();
+    }
+  }, [sessionReady, loadConversations]);
 
-  // Load messages for a conversation
   const loadMessages = useCallback(async (convId: string) => {
     try {
       const res = await fetch(`/api/conversations/${convId}/messages`);
@@ -54,7 +69,7 @@ export default function Home() {
       setStreamingMessage("");
       await loadMessages(id);
     },
-    [loadMessages]
+    [loadMessages],
   );
 
   const handleNewConversation = async () => {
@@ -116,7 +131,6 @@ export default function Home() {
         throw new Error(err.error || "Erro na API");
       }
 
-      // Read SSE stream
       const reader = res.body!.getReader();
       const decoder = new TextDecoder();
       let accumulated = "";
@@ -138,7 +152,6 @@ export default function Home() {
                 setStreamingMessage(accumulated);
               }
               if (parsed.done) {
-                // Finalize: move streaming to real messages
                 const assistantMsg: Message = {
                   id: parsed.messageId,
                   conversation_id: activeId,
@@ -147,22 +160,26 @@ export default function Home() {
                   created_at: Math.floor(Date.now() / 1000),
                 };
                 setMessages((prev) => {
-                  // Replace temp user msg with real one and add assistant
-                  const withoutTemp = prev.filter((m) => !m.id.startsWith("temp-"));
+                  const withoutTemp = prev.filter(
+                    (m) => !m.id.startsWith("temp-"),
+                  );
                   return [...withoutTemp, tempUserMsg, assistantMsg];
                 });
                 setStreamingMessage("");
-                // Update sidebar conversation list
                 setConversations((prev) =>
                   prev.map((c) =>
                     c.id === activeId
-                      ? { ...c, updated_at: Math.floor(Date.now() / 1000), last_message: accumulated.slice(0, 80) }
-                      : c
-                  )
+                      ? {
+                          ...c,
+                          updated_at: Math.floor(Date.now() / 1000),
+                          last_message: accumulated.slice(0, 80),
+                        }
+                      : c,
+                  ),
                 );
               }
             } catch {
-              // ignore parse errors
+              // ignorar parse errors
             }
           }
         }
@@ -183,6 +200,42 @@ export default function Home() {
     }
   };
 
+  // Tela de inicialização
+  if (!sessionReady) {
+    return (
+      <div
+        style={{
+          height: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          flexDirection: "column",
+          gap: "12px",
+        }}
+      >
+        <div
+          style={{
+            color: "var(--green-bright)",
+            fontSize: "13px",
+            letterSpacing: "0.2em",
+          }}
+          className="cursor-blink"
+        >
+          INICIALIZANDO SECBOT-X
+        </div>
+        <div
+          style={{
+            color: "var(--text-muted)",
+            fontSize: "10px",
+            letterSpacing: "0.1em",
+          }}
+        >
+          Estabelecendo sessão segura...
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       style={{
@@ -201,7 +254,6 @@ export default function Home() {
         loading={sidebarLoading}
       />
 
-      {/* Main chat area */}
       <div
         style={{
           flex: 1,
@@ -225,26 +277,82 @@ export default function Home() {
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
             {activeId ? (
               <>
-                <span style={{ color: "var(--green-dim)", fontSize: "11px", letterSpacing: "0.1em" }}>
+                <span
+                  style={{
+                    color: "var(--green-dim)",
+                    fontSize: "11px",
+                    letterSpacing: "0.1em",
+                  }}
+                >
                   SESSION://
                 </span>
-                <span style={{ color: "var(--text-dim)", fontSize: "11px", fontFamily: "monospace" }}>
+                <span
+                  style={{
+                    color: "var(--text-dim)",
+                    fontSize: "11px",
+                    fontFamily: "monospace",
+                  }}
+                >
                   {activeId.slice(0, 8)}...
                 </span>
               </>
             ) : (
-              <span style={{ color: "var(--text-muted)", fontSize: "11px", letterSpacing: "0.1em" }}>
+              <span
+                style={{
+                  color: "var(--text-muted)",
+                  fontSize: "11px",
+                  letterSpacing: "0.1em",
+                }}
+              >
                 AGUARDANDO SESSÃO
               </span>
             )}
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-            <div style={{ fontSize: "10px", color: "var(--text-muted)", letterSpacing: "0.08em" }}>
-              MODEL: <span style={{ color: "var(--green-dim)" }}>LLAMA-4-MAVERICK</span>
+            <div
+              style={{
+                fontSize: "10px",
+                color: "var(--text-muted)",
+                letterSpacing: "0.08em",
+              }}
+            >
+              MODEL:{" "}
+              <span style={{ color: "var(--green-dim)" }}>
+                LLAMA-4-MAVERICK
+              </span>
             </div>
-            <div style={{ fontSize: "10px", color: "var(--text-muted)", letterSpacing: "0.08em" }}>
-              DB: <span style={{ color: "var(--green-dim)" }}>TURSO/SQLite</span>
+            <div
+              style={{
+                fontSize: "10px",
+                color: "var(--text-muted)",
+                letterSpacing: "0.08em",
+              }}
+            >
+              DB:{" "}
+              <span style={{ color: "var(--green-dim)" }}>TURSO/SQLite</span>
+            </div>
+            {/* Indicador de sessão anônima */}
+            <div
+              style={{
+                fontSize: "10px",
+                color: "var(--text-muted)",
+                letterSpacing: "0.08em",
+                display: "flex",
+                alignItems: "center",
+                gap: "5px",
+              }}
+            >
+              <span
+                style={{
+                  width: "5px",
+                  height: "5px",
+                  borderRadius: "50%",
+                  background: "var(--green-dim)",
+                  display: "inline-block",
+                }}
+              />
+              SESSÃO LOCAL
             </div>
             {isLoading && (
               <div

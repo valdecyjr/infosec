@@ -14,6 +14,13 @@ export async function initDB() {
       updated_at INTEGER NOT NULL DEFAULT (unixepoch())
     )
   `);
+  try {
+    await client.execute(
+      `ALTER TABLE conversations ADD COLUMN session_id TEXT NOT NULL DEFAULT 'legacy'`,
+    );
+  } catch {
+    // Coluna já existe — ignorar
+  }
 
   await client.execute(`
     CREATE TABLE IF NOT EXISTS messages (
