@@ -49,7 +49,7 @@ Você está pronto para auxiliar em qualquer desafio de Segurança da Informaç�
 export const OPENROUTER_CONFIG = {
   baseURL: "https://openrouter.ai/api/v1",
   // Modelo equilibrado entre capacidade técnica e custo
-  model: "meta-llama/llama-4-maverick",
+  model: "openrouter/free",
   fallbackModel: "google/gemini-2.0-flash-001",
   maxTokens: 2048,
   temperature: 0.3, // Mais determinístico para respostas técnicas
